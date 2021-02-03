@@ -1,0 +1,119 @@
+
+Without NgRx
+Counter Folder -> Counter as parent Component
+Counter Cmponnet -> Has two child component (Counter-output & Counter-buttons)
+CounterOutput Component -> This component diplay the counter value and take counter variable as @Input from parent
+CounterButtons Component -> This component has 3 buttons(increment,decrement,reset)
+All are event emitter on button click and those emitters come to parent component and 
+Invoke onIncrement,onDecrement and onReset methods to manipulate counter vaeiable in parent component
+And updated value of counter variable is displayed in CounterOutput Component
+
+Here we use Parent Child Relationship
+
+
+
+With NgRx
+1. npm install @ngrx/store
+Three steps of redux : state, Actions and reducers
+2. Create State for Counter:In state folder in counter.state.ts
+   export const initialState = {
+       counter:0
+   }
+3. Create Actions: increment,decrement,reset-> In file counter.actions.ts
+   import { createAction } from '@ngrx/store';
+
+   export const increment = createAction('increment');
+   export const decrement = createAction('decrement');
+   export const reset = createAction('reset');
+
+4.Reducers:Reducer function in counter.reducer.ts
+   import { createReducer ,on, State} from '@ngrx/store';
+   import {initialState} from './counter.state';
+   import { increment, decrement, reset } from './counter.actions';
+
+const _counterReducer = createReducer(
+    initialState,
+    on(increment,(state)=>{
+        return {
+            ...state,
+            counter:state.counter+1,
+        }
+    }),
+    on(decrement,(state)=>{
+        return {
+            ...state,
+            counter:state.counter-1,
+        }
+    }),
+    on(reset,(state)=>{
+        return {
+            ...state,
+            counter:0,
+        }
+    }));
+
+export function counterReducer(state,action){
+    return _counterReducer(state,action);
+}
+
+5.Import the store in app.module.ts
+  imports: [
+    BrowserModule,
+    CommonModule,
+    StoreModule.forRoot({counter:counterReducer})
+  ]
+  StoreModule.forFeature and forRoot both are present , start with forRoot
+
+6.Final step is to use this ngrx-store in the component by injecting
+  i. to trigger actions:
+     constructor(private store: Store<{counter:{counter: number}}>) { }
+     this.store.dispatch(increment());-> to be written inside the method , increment needs to be imported from actions
+
+  ii. Subscribe to the state change
+      constructor(private store:Store<{counter:{counter:number}}>) { }
+      
+      this.store.select('counter').subscribe(data=>{
+      this.counter=data.counter;
+      })
+
+*******
+createselectors and featureselectors if not used then
+even if one data gets changed all the subscriptions will be called
+
+const getCounterState = createFeatureSelector<CounterState>('counter');//counter is same name given in app.module.ts
+
+export const getCounter = createSelector(getCounterState,state=>{
+ return state.counter;
+})
+
+& in the component
+counter$:Observable<number>
+this.counter$ = this.store.select(getCounter);
+
+{{counter|async}}
+
+
+
+********
+Debug:NgRx Application
+Install Redux Dev too Extension
+@ngrx/store-devtools
+In App Module:
+
+StoreModule.forRoot({counter:counterReducer}),
+
+StoreDevtoolsModule.instrument({
+      logOnly: environment.production,
+}),
+*********
+                  
+                  
+                          AppState
+                             |
+                             |
+                    _________|__________
+                   |                    |
+                CounterState        PostsState
+
+One Web application should have one state i.e App state and all the other states of different modules should be inherited
+by this single appstate
